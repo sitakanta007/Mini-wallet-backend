@@ -19,4 +19,14 @@ class Transaction extends Model
         'amount' => 'decimal:2',
         'commission_fee' => 'decimal:2',
     ];
+
+    public function sender()
+    {
+        return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'receiver_id');
+    }
 }

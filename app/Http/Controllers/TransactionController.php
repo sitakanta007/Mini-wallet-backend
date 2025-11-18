@@ -17,7 +17,8 @@ class TransactionController extends Controller
     {
         $user = $request->user();
 
-        $transactions = Transaction::where(function($q) use ($user) {
+        $transactions = Transaction::with(['sender:id,name', 'receiver:id,name'])
+            ->where(function($q) use ($user) {
             $q->where('sender_id', $user->id)
               ->orWhere('receiver_id', $user->id);
         })
@@ -26,7 +27,20 @@ class TransactionController extends Controller
 
         return response()->json([
             'balance' => $user->balance,
-            'transactions' => $transactions,
+            'transactions' => $transactions->through(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'sender_id' => $t->sender_id,
+                    'sender_name' => $t->sender?->name,
+                    'receiver_id' => $t->receiver_id,
+                    'receiver_name' => $t->receiver?->name,
+                    'amount' => $t->amount,
+                    'commission_fee' => $t->commission_fee,
+                    'status' => $t->status,
+                    'idempotency_key' => $t->idempotency_key,
+                    'created_at' => $t->created_at,
+                ];
+            })
         ]);
     }
 
@@ -115,9 +129,21 @@ class TransactionController extends Controller
                     //TODO
                     //event(new MoneyTransferred($tx, $sender, $receiver));
 
+                    $tx->load(['sender:id,name', 'receiver:id,name']);
                     return response()->json([
                         'message' => 'Transfer completed',
-                        'transaction' => $tx,
+                        'transaction' => [
+                            'id' => $tx->id,
+                            'sender_id' => $tx->sender_id,
+                            'sender_name' => $tx->sender?->name,
+                            'receiver_id' => $tx->receiver_id,
+                            'receiver_name' => $tx->receiver?->name,
+                            'amount' => $tx->amount,
+                            'commission_fee' => $tx->commission_fee,
+                            'status' => $tx->status,
+                            'idempotency_key' => $tx->idempotency_key,
+                            'created_at' => $tx->created_at,
+                        ],
                         'balance' => $sender->balance,
                         'idempotent' => false
                     ], 201);
